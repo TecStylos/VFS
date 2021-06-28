@@ -1,4 +1,5 @@
 #pragma once
 
-#include "VFS/HashPath.h"
+#include "VFS/VFSHash.h"
+#include "VFS/VFSHashPath.h"
 #include "VFS/VFSBase.h"

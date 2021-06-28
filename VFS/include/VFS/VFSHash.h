@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-#include "RotaryShift.h"
+#include "VFSRotaryShift.h"
 
 namespace VFS {
 
@@ -11,7 +11,7 @@ namespace VFS {
 
 	Hash makeHash(const std::string& str)
 	{
-		constexpr uint64_t packSize = sizeof(str);
+		constexpr uint64_t packSize = sizeof(Hash);
 
 		auto combine = [](Hash& full, Hash part, uint64_t index)
 		{
@@ -23,15 +23,15 @@ namespace VFS {
 		const uint64_t offsetLastPack = nPacks * packSize;
 		const uint64_t nBytesLastPack = nBytes % packSize;
 
-		Hash hashFull;
+		Hash hashFull = 0;
 
 		for (uint64_t i = 0; i < nPacks; ++i)
 			combine(hashFull, *(const Hash*)(str.data() + (i * nBytes)), i);
 
-		if (nBytesLastPack)
+		if (nBytesLastPack > 0)
 		{
 			Hash hashPart = 0;
-			memcpy(&hashPart, *(const Hash*)(str.data() + offsetLastPack), nBytesLastPack);
+			memcpy(&hashPart, str.data() + offsetLastPack, nBytesLastPack);
 			combine(hashFull, hashPart, nPacks);
 		}
 
