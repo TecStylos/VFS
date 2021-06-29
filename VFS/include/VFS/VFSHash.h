@@ -15,9 +15,9 @@ namespace VFS {
 
 		auto combine = [](Hash& full, Hash part, uint64_t index)
 		{
-			//constexpr uint64_t prime = 7;
-			//full *= prime;
-			full ^= rotaryShiftLeft64(part, (index * 2) % (sizeof(Hash) * CHAR_BIT));
+			constexpr uint64_t prime = 7;
+			full *= prime;
+			full += rotaryShiftLeft64(part, index % (sizeof(Hash) * CHAR_BIT));
 		};
 
 		const uint64_t nBytes = str.size();
