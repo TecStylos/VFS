@@ -32,11 +32,11 @@ int main()
 	uint64_t nScanned = 0;
 	uint64_t nSameName = 0;
 
-	auto checkName = [&nScanned, &hashMap, &nClashes, &nSameName](std::filesystem::recursive_directory_iterator it)
+	auto checkName = [&nScanned, &hashMap, &nClashes, &nSameName](const std::filesystem::directory_entry& entry)
 	{
 		++nScanned;
 
-		auto name = it->path().filename().u8string();
+		auto name = entry.path().filename().u8string();
 		auto hash = VFS::makeHash(name);
 
 		auto mapIt = hashMap.find(hash);
@@ -44,7 +44,7 @@ int main()
 		{
 			if (name != mapIt->second)
 			{
-				std::cout << "Found clash: '" << name << "' && '" << mapIt->second << "' --> " << hash << std::endl;
+				std::cout << "  Found clash: '" << name << "' && '" << mapIt->second << "' --> " << hash << std::endl;
 				++nClashes;
 			}
 			else
@@ -59,32 +59,34 @@ int main()
 
 	auto scanDrive = [checkName](const std::string& drivepath)
 	{
-		std::error_code ec;
-		for (auto it = std::filesystem::recursive_directory_iterator(drivepath, std::filesystem::directory_options::skip_permission_denied); it != std::filesystem::recursive_directory_iterator(); it.increment(ec))
+		auto it = std::filesystem::recursive_directory_iterator(drivepath, std::filesystem::directory_options::skip_permission_denied);
+		while (it != std::filesystem::recursive_directory_iterator())
 		{
-			if (ec)
-				break;
-			checkName(it);
+			checkName(*it);
+			try
+			{
+				++it;
+			}
+			catch (...)
+			{
+				;
+			}
 		}
-
-		return ec;
 	};
 
 	std::error_code ec;
 	std::cout << "Scanning drive 'C:\\' ..." << std::endl;
-	if (ec = scanDrive("C:\\"))
-		std::cout << "ERROR: " << ec.message() << std::endl;
+	scanDrive("C:\\");
 	std::cout << "Scanning drive 'D:\\' ..." << std::endl;
-	if (ec = scanDrive("D:\\"))
-		std::cout << "ERROR: " << ec.message() << std::endl;
+	scanDrive("D:\\");
 	std::cout << "Scanning drive 'E:\\' ..." << std::endl;
-	if (ec = scanDrive("E:\\"))
-		std::cout << "ERROR: " << ec.message() << std::endl;
+	scanDrive("E:\\");
 
-	std::cout << "Scanned " << nScanned << " file-/dirnames." << std::endl;
-	std::cout << "Found " << nClashes << " clashes." << std::endl;
-	std::cout << "#DiffHashes: " << hashMap.size() << std::endl;
-	std::cout << "#SameName: " << nSameName << std::endl;
+	std::cout << "////////////////////////////////////////////////////////////" << std::endl;
+	std::cout << "-- Scanned " << nScanned << " file-/dirnames." << std::endl;
+	std::cout << "-- Found " << nClashes << " clashes." << std::endl;
+	std::cout << "-- #DiffHashes: " << hashMap.size() << std::endl;
+	std::cout << "-- #SameName: " << nSameName << std::endl;
 
 	return 0;
 }
