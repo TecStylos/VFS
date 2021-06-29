@@ -32,11 +32,10 @@ int main()
 	uint64_t nScanned = 0;
 	uint64_t nSameName = 0;
 
-	auto checkName = [&nScanned, &hashMap, &nClashes, &nSameName](const std::filesystem::directory_entry& entry)
+	auto checkName = [&nScanned, &hashMap, &nClashes, &nSameName](const std::string& name)
 	{
 		++nScanned;
 
-		auto name = entry.path().filename().u8string();
 		auto hash = VFS::makeHash(name);
 
 		auto mapIt = hashMap.find(hash);
@@ -62,7 +61,7 @@ int main()
 		auto it = std::filesystem::recursive_directory_iterator(drivepath, std::filesystem::directory_options::skip_permission_denied);
 		while (it != std::filesystem::recursive_directory_iterator())
 		{
-			checkName(*it);
+			checkName(it->path().filename().u8string());
 			try
 			{
 				++it;
