@@ -15,6 +15,8 @@ namespace VFS {
 
 		auto combine = [](Hash& full, Hash part, uint64_t index)
 		{
+			//constexpr uint64_t prime = 7;
+			//full *= prime;
 			full ^= rotaryShiftLeft64(part, (index * 2) % (sizeof(Hash) * CHAR_BIT));
 		};
 
@@ -26,7 +28,7 @@ namespace VFS {
 		Hash hashFull = 0;
 
 		for (uint64_t i = 0; i < nPacks; ++i)
-			combine(hashFull, *(const Hash*)(str.data() + (i * nBytes)), i);
+			combine(hashFull, *(const Hash*)(str.data() + (i * packSize)), i);
 
 		if (nBytesLastPack > 0)
 		{
