@@ -23,7 +23,7 @@ int main()
 	//	if (hash1 == hash2)
 	//		std::cout << "  Both hashes are equal!" << std::endl;
 	//	else
-	//		std::cout << "  Bot hashes are different!" << std::endl;
+	//		std::cout << "  Both hashes are different!" << std::endl;
 	//};
 
 	std::unordered_map<VFS::Hash, std::string> hashMap;

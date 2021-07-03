@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "VFSPlatform.h"
+
 namespace VFS {
 
 	class HashPath
@@ -10,6 +12,8 @@ namespace VFS {
 	public:
 		struct Element
 		{
+		public:
+			Element(const std::string& name);
 		public:
 			uint64_t asHash() const { return m_asHash; }
 			const std::string& asString() const { return m_asString; }
@@ -24,14 +28,22 @@ namespace VFS {
 		{
 		public:
 			Iterator(std::vector<Element>::const_iterator it);
+		public:
+			bool operator!=(const Iterator& other) const;
+			Iterator& operator++();
+			const Element& operator*() const;
 		private:
 			std::vector<Element>::const_iterator m_it;
 		};
+	public:
+		HashPath() = default;
+		HashPath(const std::string& path);
 	public:
 		uint64_t depth() const;
 		HashPath parent() const;
 		HashPath child(const Element& elem) const;
 		std::string getRealPath(const std::string& basePath = "") const;
+		static std::string formatPath(std::string path);
 	public:
 		HashPath operator+(const HashPath& other) const;
 		HashPath& operator+=(const HashPath& other);
@@ -51,6 +63,11 @@ namespace VFS {
 		std::vector<Element> m_elements;
 	};
 
+	HashPath::Element::Element(const std::string& name)
+		: m_asString(name), m_asHash(makeHash(name))
+	{
+	}
+
 	bool HashPath::Element::operator==(const Element& other) const
 	{
 		return m_asHash == other.m_asHash;
@@ -64,6 +81,37 @@ namespace VFS {
 	HashPath::Iterator::Iterator(std::vector<Element>::const_iterator it)
 		: m_it(it)
 	{
+	}
+
+	bool HashPath::Iterator::operator!=(const Iterator& other) const
+	{
+		return m_it != other.m_it;
+	}
+
+	HashPath::Iterator& HashPath::Iterator::operator++()
+	{
+		++m_it;
+		return *this;
+	}
+
+	const HashPath::Element& HashPath::Iterator::operator*() const
+	{
+		return *m_it;
+	}
+
+	HashPath::HashPath(const std::string& path)
+	{
+		auto formatted = formatPath(path);
+		uint64_t begin = 0;
+		uint64_t end = 0;
+		do
+		{
+			end = formatted.find_first_of("/", begin + 1);
+			uint64_t count = end - begin;
+			if (count > 0)
+				*this += Element(formatted.substr(begin, count));
+			begin = end + 1;
+		} while (end != std::string::npos);
 	}
 
 	uint64_t HashPath::depth() const
@@ -87,6 +135,16 @@ namespace VFS {
 		return "";
 	}
 
+	std::string HashPath::formatPath(std::string path)
+	{
+		uint64_t i = 0;
+		while ((i = path.find('\\')) != std::string::npos)
+			path[i] = '/';
+		while ((i = path.find("//")) != std::string::npos)
+			path.erase(path.begin() + i + 1);
+		return path;
+	}
+
 	HashPath HashPath::operator+(const HashPath& other) const
 	{
 		HashPath copy = *this;
@@ -96,7 +154,9 @@ namespace VFS {
 
 	HashPath& HashPath::operator+=(const HashPath& other)
 	{
-		// TODO: Implement hash path concatenation
+		
+		for (auto& elem : other)
+			*this += elem;
 		return *this;
 	}
 
@@ -109,7 +169,13 @@ namespace VFS {
 
 	HashPath& HashPath::operator+=(const Element& elem)
 	{
-		// TODO: Implement hash path - element concatenation
+		static const auto stepOutElem = Element("..");
+
+		if (elem == stepOutElem && depth() > 0)
+			*this -= 1;
+		else
+			m_elements.push_back(elem);
+
 		return *this;
 	}
 
@@ -122,13 +188,13 @@ namespace VFS {
 
 	HashPath& HashPath::operator-=(uint64_t depthDiff)
 	{
-		// TODO: Implement hash path reduction
+		while (depthDiff-- > 0)
+			m_elements.pop_back();
 		return *this;
 	}
 
 	const HashPath::Element& HashPath::operator[](uint64_t index) const
 	{
-		// TODO: Implement index op
 		return m_elements[index];
 	}
 
