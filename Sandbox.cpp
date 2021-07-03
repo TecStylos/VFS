@@ -58,18 +58,25 @@ int main()
 
 	auto scanDrive = [checkName](const std::string& drivepath)
 	{
-		auto it = std::filesystem::recursive_directory_iterator(drivepath, std::filesystem::directory_options::skip_permission_denied);
-		while (it != std::filesystem::recursive_directory_iterator())
+		try
 		{
-			checkName(it->path().filename().u8string());
-			try
+			auto it = std::filesystem::recursive_directory_iterator(drivepath, std::filesystem::directory_options::skip_permission_denied);
+			while (it != std::filesystem::recursive_directory_iterator())
 			{
-				++it;
+				checkName(it->path().filename().u8string());
+				try
+				{
+					++it;
+				}
+				catch (...)
+				{
+					;
+				}
 			}
-			catch (...)
-			{
-				;
-			}
+		}
+		catch (...)
+		{
+			;
 		}
 	};
 
