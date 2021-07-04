@@ -63,6 +63,8 @@ namespace VFS {
 		std::vector<Element> m_elements;
 	};
 
+	typedef const HashPath& HashPathRef;
+
 	HashPath::Element::Element(const std::string& name)
 		: m_asString(name), m_asHash(makeHash(name))
 	{
