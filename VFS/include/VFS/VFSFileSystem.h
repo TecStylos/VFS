@@ -1,30 +1,21 @@
 #pragma once
 
 #include "VFSHashPath.h"
+#include "VFSFileHandle.h"
 
 namespace VFS {
 
 	class FileSystem
 	{
 	public:
-		enum class ErrCode
-		{
-			Success,
-			PathNotFound,
-			NotAFile,
-			NotADirectory
-		};
-	public:
-		;
+		FileSystem() = delete;
+		FileSystem(const std::string& basePath);
 	public:
 		ErrCode createFile(HashPathRef path);
 		ErrCode deleteFile(HashPathRef path);
 		ErrCode createDirectory(HashPathRef path);
 		ErrCode deleteDirectory(HashPathRef path);
-		ErrCode setLastModTime(HashPathRef path, uint64_t modTime);
-		ErrCode writeFile(HashPathRef path, void* buffer, uint64_t count, uint64_t offset = 0);
-		ErrCode readFile(HashPathRef path, void* buffer, uint64_t count, uint64_t offset = 0);
-		ErrCode resizeFile(HashPathRef path, uint64_t newSize);
+		FileHandle getFileHandle(HashPathRef path);
 	public:
 		void setBasePath(const std::string& basePath);
 		const std::string& getBasePath() const;
