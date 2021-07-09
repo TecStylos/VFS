@@ -5,7 +5,7 @@ project("Sandbox")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-add_executable(Sandbox "Sandbox.cpp")
+add_executable(Sandbox "Sandbox.cpp" "VFS/include/VFS/VFSAbstractFileIO.h")
 
 target_include_directories(
 	Sandbox PUBLIC "VFS/include"
