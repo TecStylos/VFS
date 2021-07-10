@@ -9,9 +9,4 @@ namespace VFS {
 		NotAFile,
 		NotADirectory
 	};
-
-	operator bool(ErrCode ec)
-	{
-		return ec != ErrCode::Success;
-	}
 }

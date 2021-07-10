@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "VFSPlatform.h"
+#include "VFSHash.h"
 
 namespace VFS {
 
