@@ -34,6 +34,7 @@ namespace VFS {
 	public:
 		Error read(const std::string& path, void* buffer, uint64_t size, uint64_t offset = 0);
 		Error write(const std::string& path, const void* buffer, uint64_t size, uint64_t offset = 0);
+		uint64_t closeMatchingStreams(const std::string& path);
 	private:
 		StreamPtr getStream(const std::string& path);
 	private:
@@ -69,6 +70,22 @@ namespace VFS {
 		// TODO: Check for write errors
 
 		return ErrCode::Success;
+	}
+
+	uint64_t AbstractFileIO::closeMatchingStreams(const std::string& path)
+	{
+		uint64_t nClosed = 0;
+
+		for (auto& it : m_streams)
+		{
+			if (it.first.find(path) == 0)
+			{
+				m_streams.erase(it.first);
+				++nClosed;
+			}
+		}
+
+		return nClosed;
 	}
 
 	AbstractFileIO::StreamPtr AbstractFileIO::getStream(const std::string& path)
