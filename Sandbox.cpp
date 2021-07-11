@@ -98,11 +98,25 @@ void scanDrivePathsAndCompare()
 	std::cout << "-- #SameName: " << nSameName << std::endl;
 }
 
+void testAFIO()
+{
+	VFS::AbstractFileIO afio(2);
+	afio.write("C:\\dev\\proj\\VFS\\testdir\\file1.txt", "Hello world 1", 13);
+	afio.write("C:\\dev\\proj\\VFS\\testdir\\file2.txt", "Hello world 2", 13);
+	afio.write("C:\\dev\\proj\\VFS\\testdir\\file3.txt", "Hello world 3", 13);
+
+	char buff[14] = { 0 };
+	afio.read("C:\\dev\\proj\\VFS\\testdir\\file1.txt", buff, 13);
+	std::cout << "Text read from file1.txt: " << buff << std::endl;
+}
+
 int main()
 {
 	//compareInputStrings();
 
-	scanDrivePathsAndCompare();
+	//scanDrivePathsAndCompare();
+
+	testAFIO();
 
 	return 0;
 }

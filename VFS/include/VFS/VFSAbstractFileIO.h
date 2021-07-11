@@ -88,7 +88,7 @@ namespace VFS {
 		if (!stream)
 			return ErrCode::CannotAccessFile;
 
-		stream->seekg(offset);
+		stream->seekg(offset); // Check for seek error (eof)
 		stream->read((char*)buffer, size);
 		// TODO: Check for read errors
 
@@ -101,7 +101,7 @@ namespace VFS {
 		if (!stream)
 			return ErrCode::CannotAccessFile;
 
-		stream->seekp(offset);
+		stream->seekp(offset); // Check for seek error (eof)
 		stream->write((const char*)buffer, size);
 		// TODO: Check for write errors
 
@@ -139,7 +139,7 @@ namespace VFS {
 				m_streams.erase(m_streams.begin());
 
 			LockableStream stream(std::fstream(path, std::ios::binary | std::ios::in | std::ios::out));
-			if (!LockedStream(&stream)->good())
+			if (!LockedStream(&stream)->is_open())
 				return nullptr;
 
 			m_streams.insert(std::make_pair(path, std::move(stream)));
