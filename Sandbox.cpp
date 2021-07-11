@@ -5,27 +5,30 @@
 #include <filesystem>
 #include <unordered_map>
 
-int main()
+void compareInputStrings()
 {
-	//std::string str1, str2;
-	//VFS::Hash hash1, hash2;
+	std::string str1, str2;
+	VFS::Hash hash1, hash2;
 
-	//while (true)
-	//{
-	//	std::cout << "Enter string #1: ";
-	//	std::getline(std::cin, str1);
-	//	std::cout << "Enter string #2: ";
-	//	std::getline(std::cin, str2);
+	while (true)
+	{
+		std::cout << "Enter string #1: ";
+		std::getline(std::cin, str1);
+		std::cout << "Enter string #2: ";
+		std::getline(std::cin, str2);
 
-	//	hash1 = VFS::makeHash(str1);
-	//	hash2 = VFS::makeHash(str2);
+		hash1 = VFS::makeHash(str1);
+		hash2 = VFS::makeHash(str2);
 
-	//	if (hash1 == hash2)
-	//		std::cout << "  Both hashes are equal!" << std::endl;
-	//	else
-	//		std::cout << "  Both hashes are different!" << std::endl;
-	//};
+		if (hash1 == hash2)
+			std::cout << "  Both hashes are equal!" << std::endl;
+		else
+			std::cout << "  Both hashes are different!" << std::endl;
+	};
+}
 
+void scanDrivePathsAndCompare()
+{
 	std::unordered_map<VFS::Hash, std::string> hashMap;
 
 	uint64_t nClashes = 0;
@@ -93,6 +96,13 @@ int main()
 	std::cout << "-- Found " << nClashes << " clashes." << std::endl;
 	std::cout << "-- #DiffHashes: " << hashMap.size() << std::endl;
 	std::cout << "-- #SameName: " << nSameName << std::endl;
+}
+
+int main()
+{
+	//compareInputStrings();
+
+	scanDrivePathsAndCompare();
 
 	return 0;
 }
