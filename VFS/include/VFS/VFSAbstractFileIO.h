@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <unordered_map>
+#include <mutex>
 
 namespace VFS {
 
@@ -27,6 +28,40 @@ namespace VFS {
 				: code(ec)
 			{}
 		};
+
+		class LockedStream;
+
+		struct LockableStream
+		{
+		public:
+			LockableStream(std::fstream&& stream)
+			{
+				m_stream.swap(stream);
+			}
+			LockableStream(LockableStream&& other)
+			{
+				m_stream.swap(other.m_stream);
+			}
+		private:
+			std::mutex m_mtx;
+			std::fstream m_stream;
+		public:
+			friend LockedStream;
+		};
+
+		class LockedStream
+		{
+		public:
+			LockedStream(LockableStream* stream)
+				: m_pStream(stream) { if (m_pStream) m_pStream->m_mtx.lock(); }
+			~LockedStream() { if (m_pStream) m_pStream->m_mtx.unlock(); }
+		public:
+			std::fstream* operator->() { return &m_pStream->m_stream; }
+		public:
+			operator bool() const { return m_pStream != nullptr; }
+		private:
+			LockableStream* m_pStream;
+		};
 	private:
 		typedef std::fstream* StreamPtr;
 	public:
@@ -36,9 +71,10 @@ namespace VFS {
 		Error write(const std::string& path, const void* buffer, uint64_t size, uint64_t offset = 0);
 		uint64_t closeMatchingStreams(const std::string& path);
 	private:
-		StreamPtr getStream(const std::string& path);
+		LockedStream getStream(const std::string& path);
 	private:
-		std::unordered_map<std::string, std::fstream> m_streams;
+		std::unordered_map<std::string, LockableStream> m_streams;
+		std::mutex m_mtxStreams;
 		const uint64_t m_nMaxStreams;
 	};
 
@@ -48,7 +84,7 @@ namespace VFS {
 
 	AbstractFileIO::Error AbstractFileIO::read(const std::string& path, void* buffer, uint64_t size, uint64_t offset)
 	{
-		StreamPtr stream = getStream(path);
+		LockedStream stream = getStream(path);
 		if (!stream)
 			return ErrCode::CannotAccessFile;
 
@@ -61,7 +97,7 @@ namespace VFS {
 
 	AbstractFileIO::Error AbstractFileIO::write(const std::string& path, const void* buffer, uint64_t size, uint64_t offset)
 	{
-		StreamPtr stream = getStream(path);
+		LockedStream stream = getStream(path);
 		if (!stream)
 			return ErrCode::CannotAccessFile;
 
@@ -76,6 +112,8 @@ namespace VFS {
 	{
 		uint64_t nClosed = 0;
 
+		std::lock_guard lock(m_mtxStreams);
+
 		for (auto& it : m_streams)
 		{
 			if (it.first.find(path) == 0)
@@ -88,20 +126,24 @@ namespace VFS {
 		return nClosed;
 	}
 
-	AbstractFileIO::StreamPtr AbstractFileIO::getStream(const std::string& path)
+	AbstractFileIO::LockedStream AbstractFileIO::getStream(const std::string& path)
 	{
-		auto it = m_streams.find(path);
-		if (it != m_streams.end())
-			return &it->second;
+		{
+			std::lock_guard lock(m_mtxStreams);
 
-		if (m_streams.size() == m_nMaxStreams)
-			m_streams.erase(m_streams.begin());
+			auto it = m_streams.find(path);
+			if (it != m_streams.end())
+				return &it->second;
 
-		std::fstream s(path, std::ios::binary | std::ios::in | std::ios::out);
-		if (!s.good())
-			return nullptr;
+			if (m_streams.size() == m_nMaxStreams)
+				m_streams.erase(m_streams.begin());
 
-		m_streams.insert(std::make_pair(path, s));
+			LockableStream stream(std::fstream(path, std::ios::binary | std::ios::in | std::ios::out));
+			if (!LockedStream(&stream)->good())
+				return nullptr;
+
+			m_streams.insert(std::make_pair(path, stream));
+		}
 
 		return getStream(path);
 	}
