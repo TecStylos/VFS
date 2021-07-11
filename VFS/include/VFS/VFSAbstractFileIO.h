@@ -142,7 +142,7 @@ namespace VFS {
 			if (!LockedStream(&stream)->good())
 				return nullptr;
 
-			m_streams.insert(std::make_pair(path, stream));
+			m_streams.insert(std::make_pair(path, std::move(stream)));
 		}
 
 		return getStream(path);
