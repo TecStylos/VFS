@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <mutex>
 
+#include <filesystem>
+
 namespace VFS {
 
 	class AbstractFileIO
@@ -70,6 +72,11 @@ namespace VFS {
 		Error read(const std::string& path, void* buffer, uint64_t size, uint64_t offset = 0);
 		Error write(const std::string& path, const void* buffer, uint64_t size, uint64_t offset = 0);
 		uint64_t closeMatchingStreams(const std::string& path);
+	public:
+		Error create(const std::string& path);
+		bool exists(const std::string& path);
+		Error remove(const std::string& path);
+		Error resize(const std::string& path, uint64_t newSize);
 	private:
 		LockedStream getStream(const std::string& path);
 	private:
@@ -124,6 +131,50 @@ namespace VFS {
 		}
 
 		return nClosed;
+	}
+
+	AbstractFileIO::Error AbstractFileIO::create(const std::string& path)
+	{
+		
+		std::fstream s(path, std::ios::out);
+
+		if (!s.is_open())
+			return ErrCode::CannotAccessFile; // TODO: Add proper check for create errors
+
+		return ErrCode::Success;
+	}
+
+	bool AbstractFileIO::exists(const std::string& path)
+	{
+		return std::filesystem::is_regular_file(path);
+	}
+
+	AbstractFileIO::Error AbstractFileIO::remove(const std::string& path)
+	{
+		closeMatchingStreams(path);
+
+		std::error_code ec;
+
+		std::filesystem::remove(path, ec);
+
+		if (ec)
+			return ErrCode::CannotAccessFile; // TODO: Add proper check for remove errors
+
+		return ErrCode::Success;
+	}
+
+	AbstractFileIO::Error AbstractFileIO::resize(const std::string& path, uint64_t newSize)
+	{
+		closeMatchingStreams(path);
+
+		std::error_code ec;
+
+		std::filesystem::resize_file(path, newSize, ec);
+
+		if (ec)
+			return ErrCode::CannotAccessFile; // TODO: Add proper check for resize errors
+
+		return ErrCode::Success;
 	}
 
 	AbstractFileIO::LockedStream AbstractFileIO::getStream(const std::string& path)
