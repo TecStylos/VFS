@@ -9,6 +9,10 @@
 
 namespace VFS {
 
+	class AbstractFileIO;
+
+	typedef std::shared_ptr<AbstractFileIO> AbstractFileIORef;
+
 	class AbstractFileIO
 	{
 	public:
@@ -66,8 +70,10 @@ namespace VFS {
 		};
 	private:
 		typedef std::fstream* StreamPtr;
+	private:
+		AbstractFileIO(uint64_t nConcurrentStreams);
 	public:
-		AbstractFileIO(uint64_t nConcurrentStreams = 1);
+		static AbstractFileIORef create(uint64_t nConcurrentStreams = 1);
 	public:
 		Error read(const std::string& path, void* buffer, uint64_t size, uint64_t offset = 0);
 		Error write(const std::string& path, const void* buffer, uint64_t size, uint64_t offset = 0);
@@ -88,6 +94,11 @@ namespace VFS {
 	AbstractFileIO::AbstractFileIO(uint64_t nConcurrentStreams)
 		: m_nMaxStreams(nConcurrentStreams)
 	{}
+
+	AbstractFileIORef AbstractFileIO::create(uint64_t nConcurrentStreams)
+	{
+		return std::make_shared<AbstractFileIO>(nConcurrentStreams);
+	}
 
 	AbstractFileIO::Error AbstractFileIO::read(const std::string& path, void* buffer, uint64_t size, uint64_t offset)
 	{
