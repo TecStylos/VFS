@@ -79,7 +79,7 @@ namespace VFS {
 		Error write(const std::string& path, const void* buffer, uint64_t size, uint64_t offset = 0);
 		uint64_t closeMatchingStreams(const std::string& path);
 	public:
-		Error create(const std::string& path);
+		Error make(const std::string& path);
 		bool exists(const std::string& path);
 		Error remove(const std::string& path);
 		Error resize(const std::string& path, uint64_t newSize);
@@ -97,7 +97,9 @@ namespace VFS {
 
 	AbstractFileIORef AbstractFileIO::create(uint64_t nConcurrentStreams)
 	{
-		return std::make_shared<AbstractFileIO>(nConcurrentStreams);
+		AbstractFileIORef afio;
+		afio.reset(new AbstractFileIO(nConcurrentStreams));
+		return afio;
 	}
 
 	AbstractFileIO::Error AbstractFileIO::read(const std::string& path, void* buffer, uint64_t size, uint64_t offset)
@@ -144,7 +146,7 @@ namespace VFS {
 		return nClosed;
 	}
 
-	AbstractFileIO::Error AbstractFileIO::create(const std::string& path)
+	AbstractFileIO::Error AbstractFileIO::make(const std::string& path)
 	{
 		
 		std::fstream s(path, std::ios::out);

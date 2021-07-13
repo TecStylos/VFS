@@ -101,9 +101,18 @@ void scanDrivePathsAndCompare()
 void testAFIO()
 {
 	auto afio = VFS::AbstractFileIO::create(2);
-	afio->write("C:\\dev\\proj\\VFS\\testdir\\file1.txt", "Hello world 1", 13);
-	afio->write("C:\\dev\\proj\\VFS\\testdir\\file2.txt", "Hello world 2", 13);
-	afio->write("C:\\dev\\proj\\VFS\\testdir\\file3.txt", "Hello world 3", 13);
+	auto f1Str = "C:\\dev\\proj\\VFS\\testdir\\file1.txt";
+	auto f2Str = "C:\\dev\\proj\\VFS\\testdir\\file2.txt";
+	auto f3Str = "C:\\dev\\proj\\VFS\\testdir\\file3.txt";
+	if (!afio->exists(f1Str))
+		afio->make(f1Str);
+	afio->write(f1Str, "Hello world 1", 13);
+	if (!afio->exists(f2Str))
+		afio->make(f2Str);
+	afio->write(f2Str, "Hello world 2", 13);
+	if (!afio->exists(f3Str))
+		afio->make(f3Str);
+	afio->write(f3Str, "Hello world 3", 13);
 
 	char buff[14] = { 0 };
 	afio->read("C:\\dev\\proj\\VFS\\testdir\\file1.txt", buff, 13);
