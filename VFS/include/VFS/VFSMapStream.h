@@ -31,8 +31,8 @@ namespace VFS {
 		uint64_t internalFindUnsorted(ConstKey key);
 		void internalRead(Location location, Type type, uint64_t index, Val valBuff);
 		void internalWrite(Location location, Type type, uint64_t index, ConstVal value);
-		uint64_t internalCalcInFileOffset(Location location, Type type, uint64_t elemIndex);
-		uint64_t internalGetInListOffset(Location location);
+		uint64_t internalGetInFileOffset(Location location, Type type, uint64_t elemIndex);
+		uint64_t internalGetLocationBegin(Location location);
 		uint64_t internalGetInElemOffset(Type type);
 		uint64_t internalGetTypeSize(Type type);
 	private:
@@ -52,8 +52,6 @@ namespace VFS {
 			uint64_t valSize = 16;
 			uint64_t nSorted = 0;
 			uint64_t nUnsorted = 0;
-			uint64_t sortedOffset = 0;
-			uint64_t unsortedOffset = 0;
 		} m_header;
 		Comparator m_comp = DefaultComparator;
 	};
@@ -115,7 +113,7 @@ namespace VFS {
 
 	void MapStream::flush()
 	{
-		// TODO: Implement MapStream::currOptimization
+		// TODO: Implement MapStream::flush
 	}
 
 	uint64_t MapStream::getKeySize() const
@@ -130,7 +128,27 @@ namespace VFS {
 
 	uint64_t MapStream::internalFindSorted(ConstKey key)
 	{
-		// TODO: Implement MapStream::internalFindSorted
+		uint64_t stepSize = m_header.nSorted - 2;
+		uint64_t index = stepSize;
+
+		uint64_t result = -1;
+
+		Key temp = makeKey();
+		do
+		{
+			if (internalCompare(temp, key))
+				index += stepSize;
+			else if (internalCompare(key, temp))
+				index -= stepSize;
+			else
+				result = index;
+
+			stepSize /= 2;
+		} while (stepSize > 0 && result == -1);
+
+		destroyKey(temp);
+
+		return result;
 	}
 
 	uint64_t MapStream::internalFindUnsorted(ConstKey key)
@@ -180,20 +198,20 @@ namespace VFS {
 		);
 	}
 
-	uint64_t MapStream::internalCalcInFileOffset(Location location, Type type, uint64_t elemIndex)
+	uint64_t MapStream::internalGetInFileOffset(Location location, Type type, uint64_t elemIndex)
 	{
 		return
-			internalGetInListOffset(location) +
+			internalGetLocationBegin(location) +
 			elemIndex * (m_header.keySize + m_header.valSize) +
 			internalGetInElemOffset(type);
 	}
 
-	uint64_t MapStream::internalGetInListOffset(Location location)
+	uint64_t MapStream::internalGetLocationBegin(Location location)
 	{
 		switch (location)
 		{
-		case Location::Sorted: return m_header.sortedOffset;
-		case Location::Unsorted: return m_header.unsortedOffset;
+		case Location::Sorted: return sizeof(Header);
+		case Location::Unsorted: return sizeof(Header) + m_header.nSorted * (m_header.keySize + m_header.valSize);
 		}
 		return -1;
 	}
