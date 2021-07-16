@@ -119,13 +119,37 @@ void testAFIO()
 	std::cout << "Text read from file1.txt: " << buff << std::endl;
 }
 
+void testMapStream()
+{
+	auto afio = VFS::AbstractFileIO::create(2);
+	uint64_t keySize = sizeof(uint64_t);
+	uint64_t valSize = sizeof(uint64_t);
+	VFS::MapStream ms("C:\\dev\\proj\\VFS\\testdir\\MapStreamTest.msf", afio, keySize, valSize);
+
+	for (uint64_t key = 0; key < 1000; ++key)
+	{
+		uint64_t value = key * key;
+		ms.insert(&key, &value);
+	}
+	ms.optimize();
+	ms.flush();
+
+	uint64_t keyToSearchFor = 500;
+	uint64_t index = ms.find(&keyToSearchFor);
+	uint64_t retrievedValue;
+	ms.getValue(index, &retrievedValue);
+	std::cout << "Found key at index " << index << " with value " << retrievedValue << std::endl;
+}
+
 int main()
 {
 	//compareInputStrings();
 
 	//scanDrivePathsAndCompare();
 
-	testAFIO();
+	//testAFIO();
+
+	testMapStream();
 
 	return 0;
 }
