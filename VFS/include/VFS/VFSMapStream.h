@@ -67,6 +67,7 @@ namespace VFS {
 			const char identifier[6] = { 'V', 'F', 'S', 'M', 'S', 'F' }; // VirtualFileSystem MapStreamFile
 			uint64_t keySize = -1;
 			uint64_t valSize = -1;
+			uint64_t elemSize = -1;
 			uint64_t nSorted = 0;
 			uint64_t nUnsorted = 0;
 		} m_header;
@@ -104,6 +105,7 @@ namespace VFS {
 			m_afio->make(m_path);
 			m_header.keySize = keySize;
 			m_header.valSize = valSize;
+			m_header.elemSize = keySize + valSize;
 			flush();
 		}
 	}
