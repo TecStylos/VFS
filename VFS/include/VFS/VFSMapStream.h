@@ -288,6 +288,41 @@ namespace VFS {
 	void MapStream::internalErase()
 	{
 		// TODO: Implement MapStream::internalErase
+		uint64_t nErasedSorted = 0;
+		uint64_t nErasedUnsorted = 0;
+
+		uint64_t lastByte = internalGetInFileOffset(Location::Unsorted, Type::Key, m_header.nUnsorted) - 1;
+		for (auto it = m_toErase.begin(); it != m_toErase.end(); ++it)
+		{
+			uint64_t index = *it;
+
+			bool isUnsorted = (index & UNSORTED_INDEX_BIT);
+
+			uint64_t blockBegin = internalGetInFileOffset(
+				isUnsorted ? Location::Unsorted : Location::Sorted,
+				Type::Key,
+				(index & ~UNSORTED_INDEX_BIT)
+			);
+
+			auto nextIt = std::next(it);
+
+			uint64_t blockEnd = (nextIt != m_toErase.end()) ?
+				internalGetInFileOffset(
+					isUnsorted ? Location::Unsorted : Location::Sorted,
+					Type::Key,
+					(*nextIt & ~UNSORTED_INDEX_BIT)
+				) :
+				lastByte;
+
+			uint64_t blockSize = blockEnd - blockBegin;
+			Buffer buffer(blockSize);
+			m_afio->read(m_path, *buffer, blockSize, blockBegin);
+			m_afio->write(m_path, *buffer, blockSize, blockBegin - m_header.elemSize * (nErasedSorted + nErasedUnsorted));
+
+			++*(isUnsorted ? &nErasedUnsorted : &nErasedSorted);
+		}
+		m_header.nSorted -= nErasedSorted;
+		m_header.nUnsorted -= nErasedUnsorted;
 		m_toErase.clear();
 	}
 

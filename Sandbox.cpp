@@ -131,8 +131,20 @@ void testMapStream()
 		uint64_t value = key * key;
 		ms.insert(&key, &value);
 	}
-	ms.optimize();
+	for (uint64_t key = 0; key < 1000; key += 6)
+	{
+		ms.erase(&key);
+	}
 	ms.flush();
+	
+	uint64_t nFound = 0;
+	for (uint64_t key = 0; key < 1000; key += 6)
+	{
+		if (ms.find(&key) != -1)
+			++nFound;
+	}
+
+	std::cout << "Found " << nFound << " deleted keys. (Should be 0!)" << std::endl;
 
 	uint64_t keyToSearchFor = 500;
 	uint64_t index = ms.find(&keyToSearchFor);
