@@ -131,20 +131,30 @@ void testMapStream()
 		uint64_t value = key * key;
 		ms.insert(&key, &value);
 	}
+
+	uint64_t nErased = 0;
 	for (uint64_t key = 0; key < 1000; key += 6)
 	{
 		ms.erase(&key);
-	}
-	ms.flush();
-	
-	uint64_t nFound = 0;
-	for (uint64_t key = 0; key < 1000; key += 6)
-	{
-		if (ms.find(&key) != -1)
-			++nFound;
+		++nErased;
 	}
 
-	std::cout << "Found " << nFound << " deleted keys. (Should be 0!)" << std::endl;
+	std::cout << "Erased " << nErased << " keys!" << std::endl;
+
+	ms.flush();
+	
+	uint64_t nFoundErased = 0;
+	uint64_t nFoundNotErased = 0;
+	for (uint64_t key = 0; key < 1000; ++key)
+	{
+		if (ms.find(&key) != -1)
+			++* ((key % 6 == 0) ? &nFoundErased : &nFoundNotErased);
+		else if (key % 6 != 0)
+			std::cout << "Wrong key deleted!: " << key << std::endl;
+	}
+
+	std::cout << "Found " << nFoundErased << " deleted keys. (Should be 0!)" << std::endl;
+	std::cout << "Found " << nFoundNotErased << " non-deleted keys. (Should be " << 1000 - nErased << "!)" << std::endl;
 
 	uint64_t keyToSearchFor = 500;
 	uint64_t index = ms.find(&keyToSearchFor);

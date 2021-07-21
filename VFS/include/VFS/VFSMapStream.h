@@ -149,6 +149,10 @@ namespace VFS {
 	void MapStream::erase(ConstKey key)
 	{
 		uint64_t index = find(key);
+
+		if (index == -1)
+			return;
+
 		m_toErase.insert(index);
 	}
 
@@ -291,33 +295,39 @@ namespace VFS {
 		uint64_t nErasedSorted = 0;
 		uint64_t nErasedUnsorted = 0;
 
-		uint64_t lastByte = internalGetInFileOffset(Location::Unsorted, Type::Key, m_header.nUnsorted) - 1;
+		if (!m_toErase.empty())
+		{
+			uint64_t endIndex = (m_header.nUnsorted | UNSORTED_INDEX_BIT);
+			m_toErase.insert(endIndex);
+		}
+
 		for (auto it = m_toErase.begin(); it != m_toErase.end(); ++it)
 		{
 			uint64_t index = *it;
-
 			bool isUnsorted = (index & UNSORTED_INDEX_BIT);
+			index = (index & ~UNSORTED_INDEX_BIT);
 
 			uint64_t blockBegin = internalGetInFileOffset(
 				isUnsorted ? Location::Unsorted : Location::Sorted,
 				Type::Key,
-				(index & ~UNSORTED_INDEX_BIT)
+				index + 1
 			);
 
 			auto nextIt = std::next(it);
 
-			uint64_t blockEnd = (nextIt != m_toErase.end()) ?
-				internalGetInFileOffset(
-					isUnsorted ? Location::Unsorted : Location::Sorted,
-					Type::Key,
-					(*nextIt & ~UNSORTED_INDEX_BIT)
-				) :
-				lastByte;
+			if (nextIt == m_toErase.end())
+				break;
 
-			uint64_t blockSize = blockEnd - blockBegin;
+			uint64_t blockSize = internalGetInFileOffset(
+				isUnsorted ? Location::Unsorted : Location::Sorted,
+				Type::Key,
+				(*nextIt & ~UNSORTED_INDEX_BIT)
+			) - blockBegin;
+
 			Buffer buffer(blockSize);
 			m_afio->read(m_path, *buffer, blockSize, blockBegin);
-			m_afio->write(m_path, *buffer, blockSize, blockBegin - m_header.elemSize * (nErasedSorted + nErasedUnsorted));
+			uint64_t blockBeginShifted = blockBegin - m_header.elemSize * (nErasedSorted + nErasedUnsorted + 1);
+			m_afio->write(m_path, *buffer, blockSize, blockBeginShifted);
 
 			++*(isUnsorted ? &nErasedUnsorted : &nErasedSorted);
 		}
