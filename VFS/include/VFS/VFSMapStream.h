@@ -158,7 +158,9 @@ namespace VFS {
 
 	void MapStream::optimize()
 	{
-		// TODO: Implement MapStream::optimize
+		flush();
+
+		// TODO: Implement optimization
 	}
 
 	float MapStream::currOptimization() const
@@ -291,7 +293,6 @@ namespace VFS {
 
 	void MapStream::internalErase()
 	{
-		// TODO: Implement MapStream::internalErase
 		uint64_t nErasedSorted = 0;
 		uint64_t nErasedUnsorted = 0;
 
@@ -324,10 +325,21 @@ namespace VFS {
 				(*nextIt & ~UNSORTED_INDEX_BIT)
 			) - blockBegin;
 
-			Buffer buffer(blockSize);
-			m_afio->read(m_path, *buffer, blockSize, blockBegin);
+			uint64_t nRemaining = blockSize;
+			constexpr uint64_t maxBuffSize = 16384;
+			Buffer buffer(std::min(maxBuffSize, nRemaining));
 			uint64_t blockBeginShifted = blockBegin - m_header.elemSize * (nErasedSorted + nErasedUnsorted + 1);
-			m_afio->write(m_path, *buffer, blockSize, blockBeginShifted);
+			while (nRemaining != 0)
+			{
+				uint64_t nToMove = std::min(maxBuffSize, nRemaining);
+				m_afio->read(m_path, *buffer, nToMove, blockBegin);
+				m_afio->write(m_path, *buffer, nToMove, blockBeginShifted);
+
+				blockBegin += nToMove;
+				blockBeginShifted += nToMove;
+
+				nRemaining -= nToMove;
+			}
 
 			++*(isUnsorted ? &nErasedUnsorted : &nErasedSorted);
 		}
