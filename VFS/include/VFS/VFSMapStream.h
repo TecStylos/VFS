@@ -12,7 +12,7 @@ namespace VFS {
 		{
 		public:
 			Buffer(void* buff) : m_buff((char*)buff), m_autoDelete(false) {}
-			Buffer(uint64_t size) : m_buff(new char[size]), m_autoDelete(true) {}
+			explicit Buffer(uint64_t size) : m_buff(new char[size]), m_autoDelete(true) {}
 			Buffer(const Buffer& other) : m_buff(other.m_buff), m_autoDelete(false) {}
 			Buffer(Buffer&& other) noexcept : m_buff(other.m_buff), m_autoDelete(other.m_buff) { other.m_autoDelete = false; }
 		public:
