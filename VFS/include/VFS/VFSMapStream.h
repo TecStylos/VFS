@@ -17,8 +17,15 @@ namespace VFS {
 			Buffer(const Buffer& other) : m_buff(other.m_buff), m_autoDelete(false) {}
 			Buffer(Buffer&& other) noexcept : m_buff(other.m_buff), m_autoDelete(other.m_buff) { other.m_autoDelete = false; }
 		public:
+			~Buffer() { doAutoDelete(); }
+		public:
+			Buffer& operator=(const Buffer& other) { doAutoDelete(); m_buff = other.m_buff; m_autoDelete = false; }
+			Buffer& operator=(Buffer&& other) { doAutoDelete(); m_buff = other.m_buff; m_autoDelete = other.m_autoDelete; other.m_buff = nullptr; other.m_autoDelete = false; }
+		public:
 			void* operator*() const { return m_buff; }
 			bool hasAutoDelete() const { return m_autoDelete; }
+		private:
+			void doAutoDelete() { if (m_autoDelete) delete m_buff; m_autoDelete = false; m_buff = nullptr; }
 		private:
 			char* m_buff;
 			bool m_autoDelete;
@@ -143,9 +150,33 @@ namespace VFS {
 
 		Buffer buff(m_header.nUnsorted * size(Type::Elem));
 
-		//std::qsort(*buff, m_header.nUnsorted, size(Type::Elem), m_comp); // TODO: Implement own sort algorithm
+		// TODO: Implement sort algorithm
 
-		// TODO: Implement optimization
+		uint64_t buffIndex = m_header.nUnsorted - 1;
+		uint64_t sortedIndex = m_header.nSorted - 1;
+
+		Buffer lastElem = makeKey();
+		if (sortedIndex != -1)
+			read(Location::Sorted, Type::Elem, sortedIndex, lastElem);
+
+		Buffer tempElem = (char*)*buff + buffIndex * size(Type::Elem);
+
+		for (uint64_t i = m_header.nUnsorted - 1; i != -1; --i)
+		{
+			if (sortedIndex == -1 || compare(lastElem, tempElem))
+			{
+				write(Location::Unsorted, Type::Elem, i, tempElem);
+				--buffIndex;
+				tempElem = (char*)*buff + buffIndex * size(Type::Elem);
+			}
+			else
+			{
+				write(Location::Unsorted, Type::Elem, i, lastElem);
+				--sortedIndex;
+				if (sortedIndex != -1)
+					read(Location::Sorted, Type::Elem, sortedIndex, lastElem);
+			}
+		}
 	}
 
 	float MapStream::currOptimization() const
@@ -250,6 +281,7 @@ namespace VFS {
 	{
 		switch (type)
 		{
+		case Type::Elem: return 0;
 		case Type::Key: return 0;
 		case Type::Value: return size(Type::Key);
 		}
@@ -260,9 +292,9 @@ namespace VFS {
 	{
 		switch (type)
 		{
+		case Type::Elem: return m_header.elemSize;
 		case Type::Key: return m_header.keySize;
 		case Type::Value: return m_header.valSize;
-		case Type::Elem: return m_header.elemSize;
 		}
 		return 0;
 	}
