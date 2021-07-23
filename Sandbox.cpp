@@ -141,7 +141,7 @@ void testMapStream()
 
 	std::cout << "Erased " << nErased << " keys!" << std::endl;
 
-	ms.flush();
+	ms.optimize();
 	
 	uint64_t nFoundErased = 0;
 	uint64_t nFoundNotErased = 0;

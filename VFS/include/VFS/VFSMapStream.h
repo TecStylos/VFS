@@ -20,7 +20,7 @@ namespace VFS {
 			~Buffer() { doAutoDelete(); }
 		public:
 			Buffer& operator=(const Buffer& other) { doAutoDelete(); m_buff = other.m_buff; m_autoDelete = false; }
-			Buffer& operator=(Buffer&& other) { doAutoDelete(); m_buff = other.m_buff; m_autoDelete = other.m_autoDelete; other.m_buff = nullptr; other.m_autoDelete = false; }
+			Buffer& operator=(Buffer&& other) { doAutoDelete(); m_buff = other.m_buff; m_autoDelete = other.m_autoDelete; other.m_buff = nullptr; other.m_autoDelete = false; return *this; }
 		public:
 			void* operator*() const { return m_buff; }
 			bool hasAutoDelete() const { return m_autoDelete; }
@@ -50,6 +50,7 @@ namespace VFS {
 		uint64_t findSorted(ConstKey key) const;
 		uint64_t findUnsorted(ConstKey key) const;
 		void read(Location location, Type type, uint64_t index, Buffer buff) const;
+		void read(Location location, uint64_t nBytes, uint64_t index, Buffer buff) const;
 		void write(Location location, Type type, uint64_t index, ConstBuffer buff);
 		uint64_t getOffsetInFile(Location location, Type type, uint64_t elemIndex) const;
 		uint64_t getOffsetLocation(Location location) const;
@@ -148,10 +149,40 @@ namespace VFS {
 	{
 		flush();
 
+		if (m_header.nUnsorted == 0)
+			return;
+
 		Buffer buff(m_header.nUnsorted * size(Type::Elem));
+		read(Location::Unsorted, m_header.nUnsorted, 0, buff);
 
-		// TODO: Implement sort algorithm
+		// Sort the unsorted data
+		for (uint64_t toCheckIndex = m_header.nUnsorted - 1; toCheckIndex != -1; --toCheckIndex)
+		{
+			char* baseElem = (char*)*buff + size(Type::Elem) * toCheckIndex;
+			char* biggerElem = baseElem;
 
+			// Find an element bigger than the current
+			for (uint64_t tempIndex = 0; tempIndex < toCheckIndex; ++tempIndex)
+			{
+				char* tempElem = (char*)*buff + size(Type::Elem) * tempIndex;
+				if (compare(biggerElem, tempElem))
+					biggerElem = tempElem;
+			}
+
+			if (biggerElem != baseElem)
+			{
+				// Swap both elements
+				for (uint64_t i = 0; i < m_header.elemSize; ++i)
+				{
+					char tc = biggerElem[i];
+					biggerElem[i] = baseElem[i];
+					baseElem[i] = tc;
+				}
+			}
+		}
+
+
+		// Initialize needed vars for merging
 		uint64_t buffIndex = m_header.nUnsorted - 1;
 		uint64_t sortedIndex = m_header.nSorted - 1;
 
@@ -161,6 +192,7 @@ namespace VFS {
 
 		Buffer tempElem = (char*)*buff + buffIndex * size(Type::Elem);
 
+		// Merge the sorted buffer with the already sorted data
 		for (uint64_t i = m_header.nUnsorted - 1; i != -1; --i)
 		{
 			if (sortedIndex == -1 || compare(lastElem, tempElem))
@@ -177,6 +209,9 @@ namespace VFS {
 					read(Location::Sorted, Type::Elem, sortedIndex, lastElem);
 			}
 		}
+
+		m_header.nSorted += m_header.nUnsorted;
+		m_header.nUnsorted = 0;
 	}
 
 	float MapStream::currOptimization() const
@@ -245,6 +280,20 @@ namespace VFS {
 		);
 	}
 
+	void MapStream::read(Location location, uint64_t nElements, uint64_t index, Buffer buff) const
+	{
+		m_afio->read(
+			m_path,
+			*buff,
+			size(Type::Elem) * nElements,
+			getOffsetInFile(
+				location,
+				Type::Elem,
+				index
+			)
+		);
+	}
+
 	void MapStream::write(Location location, Type type, uint64_t index, ConstBuffer buff)
 	{
 		m_afio->write(
@@ -304,11 +353,11 @@ namespace VFS {
 		uint64_t nErasedSorted = 0;
 		uint64_t nErasedUnsorted = 0;
 
-		if (!m_toErase.empty())
-		{
-			uint64_t endIndex = (m_header.nUnsorted | UNSORTED_INDEX_BIT);
-			m_toErase.insert(endIndex);
-		}
+		if (m_toErase.empty())
+			return;
+
+		uint64_t endIndex = (m_header.nUnsorted | UNSORTED_INDEX_BIT);
+		m_toErase.insert(endIndex);
 
 		for (auto it = m_toErase.begin(); it != m_toErase.end(); ++it)
 		{
